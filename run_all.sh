@@ -15,3 +15,4 @@ python experiments/exp5_filters.py        # the computed filters, in Fourier spa
 python experiments/exp6_gradmin.py        # MR-FBP_GM (gradient prior)
 python experiments/exp7_bases.py          # OWN: alternative filter bases
 python experiments/exp8_transfer.py       # OWN: filter transferability
+python experiments/exp9_regime.py         # OWN: regime map -- where MR-FBP wins and loses
