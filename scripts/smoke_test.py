@@ -12,7 +12,11 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+# results/ is git-ignored and git does not track empty dirs:
+# a fresh clone has no results/ folder. Create it.
+(ROOT / "results").mkdir(exist_ok=True)
 from src.geometry import Geometry          # noqa: E402
 from src.fbp import fbp                    # noqa: E402
 from src.filters import make_filter        # noqa: E402

@@ -32,6 +32,9 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+# results/ is git-ignored, and git does not track empty directories,
+# so a fresh clone has no results/ folder. Create it.
+(ROOT / "results").mkdir(exist_ok=True)
 
 from src.fbp import fbp                                    # noqa: E402
 from src.filters import make_filter                        # noqa: E402
