@@ -1,0 +1,6 @@
+astra-toolbox>=2.4.1   # Linux/Windows only -- no macOS build exists
+numpy
+scipy
+scikit-image
+matplotlib
+tqdm
