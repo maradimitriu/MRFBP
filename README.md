@@ -89,9 +89,31 @@ stated future work ("other bases ... can be used"); exp. 8 quantifies a claim th
 paper asserts but never measures ("there is no single filter that is ideal for
 every problem").
 
+## Averaging over seeds
+
+Our phantoms are *random* (the original paper uses three fixed images), so a single
+seed is a single sample. `exp1`, `exp7`, `exp8` and `exp9` take `--seeds`, and average
+over independent draws of **both** the phantom and the noise. Plots show the mean with
+a +/- 1 std band; `exp9` reports its headline statistic as mean +/- std across seeds.
+
+```bash
+python experiments/exp9_regime.py --seeds 0 1 2 3 4      # headline, with error bars
+python experiments/exp1_projections.py --seeds 0 1 2
+```
+
+Default is `--seeds 0` so the quick runs stay quick.
+
+## Paper-scale run
+
+Everything defaults to `N = N_d = 256`. The original paper uses 1024. To check the
+reproduction holds at their resolution:
+
+```bash
+./run_paper_scale.sh          # ~40-60 min on a Colab T4
+```
+
 ## Reproducibility
 
-All randomness is seeded (`--seed`, default 0): phantom generation and Poisson
-noise. Phantoms are generated at `oversample` times the reconstruction resolution
-and the sinogram is rebinned down, so we never reconstruct with the exact operator
-used to simulate.
+All randomness is seeded: phantom generation and Poisson noise. Phantoms are
+generated at `oversample` times the reconstruction resolution and the sinogram is
+rebinned down, so we never reconstruct with the exact operator used to simulate.

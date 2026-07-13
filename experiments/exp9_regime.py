@@ -28,7 +28,7 @@ boundary beyond which the data-dependent filter is a LIABILITY.
 """
 import argparse
 
-from _common import RESULTS, banner, np, plt, save
+from _common import RESULTS, banner, mean_std, np, plt, save
 
 from src.methods import LABELS, reconstruct
 from src.metrics import mae
@@ -41,7 +41,8 @@ P.add_argument("--angles", type=int, nargs="+", default=[16, 24, 32, 48, 64, 96,
 P.add_argument("--i0", type=float, nargs="+", default=[2.0 ** k for k in (6, 8, 10, 12, 14, 16, 20)])
 P.add_argument("--phantom", default="ellipses")
 P.add_argument("--no-sirt", action="store_true", help="drop SIRT (it dominates the runtime)")
-P.add_argument("--seed", type=int, default=0)
+P.add_argument("--seeds", type=int, nargs="+", default=[0],
+               help="independent draws of phantom AND noise; results are averaged")
 P.add_argument("--oversample", type=int, default=4)
 P.add_argument("--cpu", action="store_true")
 cfg = P.parse_args()
@@ -49,21 +50,34 @@ banner("exp9: regime map -- where does MR-FBP win?", cfg)
 
 methods = ["fbp-ram-lak", "fbp-hann", "mrfbp"] + ([] if cfg.no_sirt else ["sirt-200"])
 
-# E[method][i, j] = MAE at (N_theta = angles[i], I0 = i0[j])
-E = {m: np.full((len(cfg.angles), len(cfg.i0)), np.nan) for m in methods}
+# runs[method] = list over seeds of the (N_theta x I0) MAE grid
+runs = {m: [] for m in methods}
+loss_frac = []          # fraction of the grid where FBP-Hann beats MR-FBP, per seed
 
-for i, na in enumerate(cfg.angles):
-    geom, p_clean, gt = simulate(cfg.phantom, cfg.n, cfg.n, na, seed=cfg.seed,
-                                 oversample=cfg.oversample, use_gpu=not cfg.cpu)
-    for j, i0 in enumerate(cfg.i0):
-        p = add_poisson_noise(p_clean, i0, seed=cfg.seed)
-        for m in methods:
-            E[m][i, j] = mae(reconstruct(m, geom, p), gt)
-    print(f"  N_theta={na:4d}  " + "  ".join(
-        f"{LABELS[m]}:{E[m][i, 0]:.3f}..{E[m][i, -1]:.3f}" for m in methods))
+for seed in cfg.seeds:
+    G = {m: np.full((len(cfg.angles), len(cfg.i0)), np.nan) for m in methods}
+    for i, na in enumerate(cfg.angles):
+        geom, p_clean, gt = simulate(cfg.phantom, cfg.n, cfg.n, na, seed=seed,
+                                     oversample=cfg.oversample, use_gpu=not cfg.cpu)
+        for j, i0 in enumerate(cfg.i0):
+            p = add_poisson_noise(p_clean, i0, seed=seed)
+            for m in methods:
+                G[m][i, j] = mae(reconstruct(m, geom, p), gt)
+        print(f"  seed={seed} N_theta={na:4d}  " + "  ".join(
+            f"{LABELS[m]}:{G[m][i, 0]:.3f}..{G[m][i, -1]:.3f}" for m in methods))
+    for m in methods:
+        runs[m].append(G[m])
+    loss_frac.append(float((G["mrfbp"] > G["fbp-hann"]).mean()))
+    print(f"  seed={seed}: MR-FBP beaten by FBP-Hann on {loss_frac[-1]*100:.0f}% of the grid\n")
 
-np.savez(RESULTS / "exp9_regime.npz", angles=cfg.angles, i0=cfg.i0,
-         methods=methods, **{m: E[m] for m in methods})
+# Average the error grids over seeds. The headline claims are stated as
+# mean +/- std across independent draws, not as a single realisation.
+E = {m: mean_std(runs[m])[0] for m in methods}
+E_std = {m: mean_std(runs[m])[1] for m in methods}
+
+np.savez(RESULTS / "exp9_regime.npz", angles=cfg.angles, i0=cfg.i0, seeds=cfg.seeds,
+         methods=methods, loss_frac=loss_frac,
+         **{m: E[m] for m in methods}, **{f"{m}|std": E_std[m] for m in methods})
 
 X, Y = np.meshgrid(cfg.i0, cfg.angles)          # x = photon count, y = projections
 
@@ -98,7 +112,7 @@ a2.set_title("(b) $\\log_2$( MAE$_{\\rm MR\\text{-}FBP}$ / MAE$_{\\rm FBP\\text{
 fig.colorbar(im, ax=a2, label="red = MR-FBP worse,  blue = MR-FBP better")
 
 fig.suptitle(rf"Regime map, {cfg.phantom} phantom "
-             rf"($N$ = $N_d$ = {cfg.n}, seed {cfg.seed})")
+             rf"($N$ = $N_d$ = {cfg.n}, mean of {len(cfg.seeds)} seed(s))")
 save(fig, "exp9_regime")
 
 # --- (c) the mechanism, as slices: error vs N_theta at fixed noise ------------
@@ -117,8 +131,9 @@ save(fig, "exp9_slices")
 # --- summary --------------------------------------------------------------
 print("\nSUMMARY")
 loses = ratio > 1.0
-print(f"  MR-FBP is beaten by FBP-Hann in {loses.sum()}/{loses.size} of the "
-      f"(N_theta, I0) grid.")
+lf = np.array(loss_frac) * 100
+print(f"  MR-FBP is beaten by FBP-Hann on {lf.mean():.0f}% +/- {lf.std():.0f}% of the "
+      f"(N_theta, I0) grid  (per-seed: {', '.join(f'{v:.0f}%' for v in lf)})")
 if loses.any():
     i, j = np.unravel_index(np.nanargmax(ratio), ratio.shape)
     print(f"  Worst case: N_theta={cfg.angles[i]}, I0={cfg.i0[j]:.0f} -> "
