@@ -1,13 +1,4 @@
-"""Experiment 4 -- exponential binning: quality and cost (paper Sec. VII-D)
-   + OWN EXTENSION: sweep the binning parameter n_l.
-
-The paper fixes n_l = 2 and reports a single with/without comparison. Here we
-sweep n_l, which interpolates between coarse binning (few unknowns, fast) and
-no binning at all (n_l >= N_d: one unknown per detector, slow), and record both
-error and time as a function of the resulting number of unknowns N_b.
-
-    python experiments/exp4_binning.py
-"""
+# exp4: exponential binning -- sweep n_l and record error and cost
 import argparse
 import time
 

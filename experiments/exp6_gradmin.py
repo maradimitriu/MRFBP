@@ -1,23 +1,4 @@
-"""Experiment 6 -- MR-FBP_GM: adding a gradient prior (paper Sec. V, Figs. 14, 15).
-
-The `blocks` phantom is piecewise constant, so its gradient is sparse. MR-FBP_GM
-adds a penalty on the Sobel gradients of the reconstruction to the SAME linear
-system (costing no extra projections), which should pay off most under noise.
-
-OWN EXTENSION -- lambda is NOT scale-invariant. The paper uses the heuristic
-lam = 27 + 1600/I0, "experimentally verified to be a reasonable choice". But lam
-weights ||D W^T C_p h|| against ||p - W W^T C_p h||, and the relative magnitude of
-those two terms depends on the image size, the detector count and the data
-scaling. At N=256 the paper's constants over-regularise badly: MR-FBP_GM's error
-saturates and stops responding to the data at all.
-
-So we do two things:
-  (a) sweep lambda at each noise level and find the true optimum, and
-  (b) compare that optimum against the paper's heuristic.
-
-    python experiments/exp6_gradmin.py
-    python experiments/exp6_gradmin.py --no-sweep        # heuristic only (paper)
-"""
+# exp6: mr-fbp_gm gradient prior on blocks, with a sweep over lambda
 import argparse
 
 from _common import RESULTS, banner, np, plt, save
@@ -108,8 +89,7 @@ fig.suptitle(rf"Gradient prior on the {cfg.phantom} phantom, $N_\theta$={cfg.ang
 save(fig, "exp6_gradmin")
 
 if not cfg.no_sweep:
-    # MAE as a function of lambda, one curve per noise level: shows the optimum
-    # moving, and how far the paper's constant sits from it.
+    # mae vs lambda, one curve per noise level
     fig, ax = plt.subplots(figsize=(6.5, 4.2))
     for i, i0 in enumerate(cfg.i0):
         ax.plot(cfg.lam, lam_grid[i], "o-", ms=3, label=rf"$I_0$={i0:.0f}")

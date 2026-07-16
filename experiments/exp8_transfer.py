@@ -1,16 +1,4 @@
-"""Experiment 8 (OWN CONTRIBUTION) -- how data-dependent is the filter, really?
-
-MR-FBP's selling point is a filter tailored to the problem at hand. The paper
-asserts (Fig. 16) that "there is no single filter that is ideal for every
-problem" but never quantifies the cost of using the wrong one.
-
-Here we compute h* on a SOURCE problem, apply it as a fixed filter to a TARGET
-problem, and report the resulting error. The diagonal is true MR-FBP; the
-off-diagonal is the penalty for transferring a filter. Ram-Lak is included as
-the "no adaptation at all" baseline.
-
-    python experiments/exp8_transfer.py
-"""
+# exp8: filter transferability -- learn h* on one problem, apply it to another
 import argparse
 
 from _common import RESULTS, banner, mean_std, np, plt, save
@@ -58,8 +46,8 @@ for seed in cfg.seeds:
         geom, p, _ = data(ph, na, i0, seed)
         filters.append(mrfbp(geom, p)[1])
 
-    # Apply every filter to every target problem. The reconstruction is rescaled
-    # to best match the ground truth, so we compare filter SHAPE, not brightness.
+    # apply every filter to every target. rescale each reconstruction to the
+    # ground truth so we compare filter shape and not brightness
     M = np.zeros((len(problems), len(problems)))
     rl = np.zeros(len(problems))
     for j, (ph, na, i0) in enumerate(problems):

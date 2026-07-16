@@ -1,14 +1,4 @@
-"""Experiment 3 -- reconstruction time (paper Fig. 9).
-
-(a) time vs number of projections, fixed detector count
-(b) time vs detector count, fixed number of projections
-
-The headline claim is that MR-FBP is ~20x faster than SIRT-200, because it
-performs O(log N_d) projections instead of O(N_d). Timing excludes phantom
-generation and I/O, and every method is warmed up once before measurement.
-
-    python experiments/exp3_timing.py
-"""
+# exp3: reconstruction time vs number of projections and vs number of detectors
 import argparse
 import time
 
@@ -40,17 +30,13 @@ def timed(m, geom, p):
         t0 = time.perf_counter()
         reconstruct(m, geom, p)
         ts.append(time.perf_counter() - t0)
-    # MIN, not median: on a shared GPU every sample is the true cost PLUS some
-    # non-negative contention/throttling noise, so the minimum is the least
-    # contaminated estimate. A median would bake the noise in.
+    # min not median: on a shared gpu each sample is the true cost plus some
+    # positive contention noise, so the minimum is the cleanest estimate
     return float(np.min(ts))
 
 
-# GLOBAL warm-up. The first ASTRA call in a process pays for CUDA context creation
-# and kernel compilation; without this the first configuration of the sweep is
-# inflated and the curve is not monotone. (CUDA also caches compiled kernels on
-# disk, so this artefact hides on a warm machine and reappears on a cold one --
-# exactly the kind of thing that breaks reproducibility for someone else.)
+# global warm-up: the first astra call pays for cuda context + kernel build,
+# which would otherwise inflate the first point of the sweep
 _g, _p, _ = simulate(cfg.phantom, 128, 128, 32, seed=cfg.seed,
                      oversample=1, use_gpu=not cfg.cpu)
 for _m in methods:

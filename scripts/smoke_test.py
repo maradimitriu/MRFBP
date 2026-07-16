@@ -1,8 +1,3 @@
-"""ASTRA smoke test: does the geometry work, and does our FBP match ASTRA's?
-
-Run:  python scripts/smoke_test.py
-Saves results/smoke_test.png
-"""
 import sys
 from pathlib import Path
 
@@ -14,9 +9,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-# results/ is git-ignored and git does not track empty dirs:
-# a fresh clone has no results/ folder. Create it.
-(ROOT / "results").mkdir(exist_ok=True)
+(ROOT / "results").mkdir(exist_ok=True)      # a fresh clone has no results/ folder
 from src.geometry import Geometry          # noqa: E402
 from src.fbp import fbp                    # noqa: E402
 from src.filters import make_filter        # noqa: E402
@@ -27,14 +20,14 @@ USE_GPU = True
 
 
 def disc_phantom(n):
-    """Throwaway fixture: a white disc. Artifacts and offsets are obvious on it."""
+    # a plain white disc -- offsets and artifacts are easy to spot on it
     yy, xx = np.mgrid[:n, :n]
     r = np.sqrt((yy - n / 2) ** 2 + (xx - n / 2) ** 2)
     return (r < n / 4).astype(np.float64)
 
 
 def astra_fbp(geom, p):
-    """ASTRA's own FBP, as an independent reference for our fbp()."""
+    # astra's own fbp, as an independent reference for ours
     pid = astra.data2d.create("-sino", geom.proj_geom, p)
     rid = astra.data2d.create("-vol", geom.vol_geom, 0)
     cfg = astra.astra_dict("FBP_CUDA" if USE_GPU else "FBP")
@@ -52,11 +45,11 @@ def main():
     geom = Geometry(N, N_DET, N_ANGLES, use_gpu=USE_GPU)
     x = disc_phantom(N)
 
-    # 1. fp / bp round-trip: a blurry disc means geometry + orientation are sane.
+    # fp/bp round-trip: a blurry disc means the geometry is sane
     p = geom.fp(x)
     bp = geom.bp(p)
 
-    # 2. our FBP vs ASTRA's FBP: should agree up to a scale factor.
+    # our fbp vs astra's fbp: should agree up to a scale factor
     ours = fbp(geom, p, make_filter(N_DET, "ram-lak"))
     ref = astra_fbp(geom, p)
     scale = (ours * ref).sum() / (ours * ours).sum()
@@ -64,10 +57,8 @@ def main():
     print(f"our FBP vs ASTRA FBP: best-fit scale = {scale:.4f}, rel. max diff = {rel:.3e}")
     ok = abs(scale - 1.0) < 0.1
     print(f"  scale within 10% of 1.0? {'YES' if ok else 'NO -- normalisation is off'}")
-    print("  (residual shape difference of a few % is expected: ASTRA discretises\n"
-          "   its ramp filter slightly differently than we do)")
 
-    # 3. MR-FBP runs end to end.
+    # mr-fbp runs end to end
     rec, h = mrfbp(geom, p)
     print(f"MR-FBP done. filter length {h.size}, reconstruction range "
           f"[{rec.min():.3f}, {rec.max():.3f}]")
@@ -76,8 +67,7 @@ def main():
     for a, im, t in zip(ax, [x, p, bp, ours, rec],
                         ["phantom", "sinogram", "backprojection",
                          "FBP (Ram-Lak)", "MR-FBP"]):
-        # 'auto' only for the sinogram, which is genuinely non-square
-        # (n_angles x n_det); square images must keep their aspect ratio.
+        # only the sinogram is non-square, the images keep their aspect ratio
         a.imshow(im, cmap="gray", aspect="auto" if t == "sinogram" else "equal")
         a.set_title(t); a.axis("off")
     out = Path(__file__).resolve().parents[1] / "results" / "smoke_test.png"

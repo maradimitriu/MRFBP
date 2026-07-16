@@ -1,8 +1,4 @@
-"""Generate results/phantom_preview.png -- the phantom-families figure for the paper.
-
-Two random draws (rows) of each phantom family (columns). Run:
-    python scripts/make_phantom_figure.py
-"""
+# makes results/phantom_preview.png -- two draws of each phantom family
 import sys
 from pathlib import Path
 

@@ -1,15 +1,4 @@
-"""Experiment 1 -- reconstruction quality vs number of projections (paper Figs. 7, 8).
-
-Compares MR-FBP against FBP with three static filters and SIRT, over a range of
-projection counts, on all three phantom families.
-
-Results are averaged over independent draws of the phantom generator (--seeds);
-shaded bands are +/- 1 standard deviation across seeds.
-
-    python experiments/exp1_projections.py                        # quick, one seed
-    python experiments/exp1_projections.py --seeds 0 1 2 3 4      # with error bands
-    python experiments/exp1_projections.py --n 1024 --seeds 0 --methods fbp-ram-lak fbp-hann sirt-200 mrfbp
-"""
+# exp1: reconstruction quality vs number of projections (paper figs. 7, 8)
 import argparse
 
 from _common import RESULTS, band, banner, mean_std, np, plt, save

@@ -1,10 +1,9 @@
-"""Registry of reconstruction methods, so experiment scripts stay short."""
 from .fbp import fbp
 from .filters import make_filter
 from .mrfbp import mrfbp
 from .sirt import sirt
 
-# Names used throughout the experiments and the paper.
+# method names used across the experiments and the paper
 METHODS = ["fbp-ram-lak", "fbp-shepp-logan", "fbp-hann", "sirt-200", "sirt-1000", "mrfbp"]
 
 LABELS = {"fbp-ram-lak": "FBP-RL", "fbp-shepp-logan": "FBP-SL", "fbp-hann": "FBP-HN",

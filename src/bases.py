@@ -1,22 +1,14 @@
-"""Bases for the filter h.
-
-The MR-FBP linear system has one unknown per basis function, so the basis
-controls both the cost and the expressiveness of the method. The paper uses
-exponential binning; its conclusion notes that "other bases ... can be used
-however, which might enable us to reduce computation time even further, or
-improve reconstruction quality" -- which is what exp7 investigates.
-
-Every function returns Q of shape (2*n_det-1, n_basis): columns are filter
-vectors, centred so that index n_det-1 is offset 0. All bases are symmetric,
-since the optimal filter is.
-"""
 import numpy as np
 
 from .filters import filter_length
 
+# bases for the filter h. the mr-fbp system has one unknown per basis vector, so
+# the basis sets both the cost and the expressiveness. every function returns Q of
+# shape (2*n_det-1, n_basis) with symmetric, centred columns.
+
 
 def _widths_exponential(n_det, n_l):
-    """Half-axis bin widths: d_i = 1 for i < n_l, else 2^(i - n_l)."""
+    # half-axis bin widths: 1 for i < n_l, then 2^(i-n_l)
     widths, start, i = [], 0, 0
     while start <= n_det - 1:
         w = 1 if i < n_l else 2 ** (i - n_l)
@@ -27,35 +19,33 @@ def _widths_exponential(n_det, n_l):
 
 
 def _from_half_widths(n_det, widths):
-    """Piecewise-constant symmetric indicator basis from half-axis bin widths."""
+    # piecewise-constant symmetric indicator basis from a list of bin widths
     M, centre = filter_length(n_det), n_det - 1
     Q, start = [], 0
     for w in widths:
         offs = np.arange(start, min(start + w, n_det))
         q = np.zeros(M)
         q[centre + offs] = 1.0
-        q[centre - offs] = 1.0                 # symmetrise (offset 0 hit twice, still 1)
+        q[centre - offs] = 1.0
         Q.append(q)
         start += w
     return np.column_stack(Q)
 
 
 def exponential_basis(n_det, n_l=2):
-    """Paper Sec. IV-B. ~2+log2(n_det) bins: fine near offset 0, coarse far out."""
+    # fine near offset 0, coarse in the tails
     return _from_half_widths(n_det, _widths_exponential(n_det, n_l))
 
 
 def equidistant_basis(n_det, n_basis):
-    """Control: bins of equal width. Same number of unknowns, no exponential prior."""
+    # bins of equal width -- same number of unknowns, no exponential prior
     edges = np.linspace(0, n_det, n_basis + 1).astype(int)
     return _from_half_widths(n_det, np.diff(edges))
 
 
 def gaussian_basis(n_det, n_l=2):
-    """Gaussian RBFs at the exponential bin centres, width = bin width.
-
-    Smooth counterpart of exponential binning -- no piecewise-constant staircase.
-    """
+    # gaussian bumps at the exponential bin centres -- smooth, seperate from the
+    # piecewise-constant staircase but with the same placement
     M, centre = filter_length(n_det), n_det - 1
     n = np.arange(M) - centre
     widths = _widths_exponential(n_det, n_l)
@@ -68,13 +58,13 @@ def gaussian_basis(n_det, n_l=2):
 
 
 def dct_basis(n_det, n_basis):
-    """Low-frequency cosine modes: h(n) = cos(pi k |n| / n_det), k = 0..n_basis-1.
-
-    A band-limited (rather than spatially-localised) basis for the filter.
-    """
+    # low-frequency cosine modes: cos(pi k |n| / n_det), band-limited not localised
     M, centre = filter_length(n_det), n_det - 1
     n = np.abs(np.arange(M) - centre)
-    return np.column_stack([np.cos(np.pi * k * n / n_det) for k in range(n_basis)])
+    cols = []
+    for k in range(n_basis):
+        cols.append(np.cos(np.pi * k * n / n_det))
+    return np.column_stack(cols)
 
 
 BASES = {

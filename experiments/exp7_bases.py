@@ -1,20 +1,4 @@
-"""Experiment 7 (OWN CONTRIBUTION) -- does the filter basis matter?
-
-Exponential binning is only ONE way to reduce the number of filter unknowns.
-The paper's conclusion explicitly flags this as future work:
-
-    "Other bases for reducing the number of unknowns in the linear system can be
-     used however, which might enable us to reduce computation time even further,
-     or improve reconstruction quality."
-
-Here we compare, at MATCHED numbers of unknowns N_b:
-    exponential : the paper's piecewise-constant exponential bins
-    equidistant : piecewise-constant bins of equal width  (no exponential prior)
-    gaussian    : Gaussian RBFs at the exponential bin centres (smooth)
-    dct         : low-frequency cosine modes (band-limited rather than localised)
-
-    python experiments/exp7_bases.py
-"""
+# exp7: does the filter basis matter (exponential / equidistant / gaussian / dct)
 import argparse
 import time
 
@@ -43,13 +27,12 @@ nd = geom.n_det
 
 
 def basis(name, nb):
-    """Return a basis with (approximately) nb columns, or None if not achievable."""
     if name == "equidistant":
         return equidistant_basis(nd, nb)
     if name == "dct":
         return dct_basis(nd, nb)
-    # The exponential/gaussian bases have their column count set by n_l, so we
-    # search for the n_l whose basis has nb columns.
+    # exponential/gaussian column count is set by n_l, so search for the n_l
+    # that gives nb columns
     for n_l in range(1, nd):
         Q = exponential_basis(nd, n_l) if name == "exponential" else gaussian_basis(nd, n_l)
         if Q.shape[1] == nb:
@@ -60,7 +43,7 @@ def basis(name, nb):
 
 
 names = ["exponential", "equidistant", "gaussian", "dct"]
-# Which N_b values each basis can actually realise (exponential/gaussian are
+# n_b values each basis can actually realise (exponential/gaussian are
 # quantised by n_l, so they cannot hit every requested N_b).
 nbs = {n: [Q.shape[1] for nb in cfg.n_b if (Q := basis(n, nb)) is not None] for n in names}
 runs = {n: {"mae": [], "ssim": [], "time": []} for n in names}

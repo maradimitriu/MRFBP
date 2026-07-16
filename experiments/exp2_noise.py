@@ -1,9 +1,4 @@
-"""Experiment 2 -- robustness to Poisson noise (paper Figs. 10, 11).
-
-Fixed projection count; sweep the photon count I0 (lower I0 = more noise).
-
-    python experiments/exp2_noise.py
-"""
+# exp2: robustness to poisson noise, fixed projections and sweep over I0
 import argparse
 
 from _common import RESULTS, banner, np, plt, save

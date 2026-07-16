@@ -1,11 +1,4 @@
-"""Experiment 5 -- the computed filters themselves (paper Fig. 16).
-
-MR-FBP produces a different filter for every reconstruction problem. Plotting
-them in Fourier space next to Ram-Lak shows (a) how far they depart from the
-static filter and (b) that noise pushes the filter to suppress high frequencies.
-
-    python experiments/exp5_filters.py
-"""
+# exp5: the mr-fbp filters plotted in fourier space
 import argparse
 
 from _common import RESULTS, banner, np, plt, save
@@ -24,7 +17,7 @@ P.add_argument("--cpu", action="store_true")
 cfg = P.parse_args()
 banner("exp5: computed filters", cfg)
 
-# (phantom, N_theta, noisy?) -- the settings whose filters we compare
+# (phantom, N_theta, noisy?) settings whose filters we compare
 settings = [("ellipses", 64, False), ("ellipses", 128, False),
             ("ellipses", 64, True), ("blocks", 64, False)]
 
@@ -40,12 +33,11 @@ for ph, na, noisy in settings:
     H = np.abs(np.fft.rfft(np.fft.ifftshift(h)))
     lab = f"{ph}, $N_\\theta$={na}" + (", noisy" if noisy else "")
     store[lab] = H
-    ax[0].plot(u, H, lw=1.4, label=lab)               # RAW gain -- comparable across problems
+    ax[0].plot(u, H, lw=1.4, label=lab)               # raw gain
     ax[1].plot(u, H / H.max(), lw=1.4, label=lab)     # shape only
 
-# The filter our FBP baseline ACTUALLY applies is (pi/N_theta) * h_RL, because
-# fbp() carries the pi/N_theta factor outside h, while MR-FBP folds everything
-# into h*. This is the like-for-like reference.
+# the filter fbp actually applies is (pi/N_theta)*h_RL, so that is the fair
+# reference to compare the computed filters against
 h_rl = make_filter(cfg.n, "ram-lak")
 u_rl = np.fft.rfftfreq(h_rl.size)
 H_rl = np.abs(np.fft.rfft(np.fft.ifftshift(h_rl)))

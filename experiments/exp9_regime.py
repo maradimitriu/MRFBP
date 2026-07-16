@@ -1,31 +1,4 @@
-"""Experiment 9 (OWN CONTRIBUTION) -- where does MR-FBP actually win?
-
-MOTIVATION. The paper evaluates noise robustness at ONE projection count
-(N_theta = 64, their Fig. 10) and concludes that MR-FBP matches SIRT and beats
-static-filter FBP "for every noise level". Our exp2/exp5/exp8 suggest that
-conclusion is regime-specific:
-
-  * exp5: the computed filter drifts TOWARD Ram-Lak as N_theta grows
-          (40% -> 57% of Ram-Lak's Nyquist gain from 64 to 128 projections).
-  * exp2: under noise, MR-FBP therefore gets WORSE with more projections
-          (MAE 0.0415 -> 0.0499 -> 0.0641 at I0=1024, N_theta = 32/64/128)
-          while FBP-RL gets BETTER (0.1716 -> 0.1195 -> 0.0835).
-  * exp8: a filter learned from FEWER projections beats the native filter on
-          noisy data, by up to 2.3x.
-
-Mechanism: MR-FBP's noise robustness is not a property of the method, it is an
-artefact of DATA SCARCITY. With few angles it cannot explain high frequencies, so
-the least-squares suppresses them -- which happens to be the right thing to do
-under noise. With many angles it becomes confident enough to amplify them, which
-is exactly wrong.
-
-THIS EXPERIMENT maps the (N_theta, I0) plane and shows where each method wins.
-The output is a regime map with the MR-FBP / FBP-Hann crossover contour: the
-boundary beyond which the data-dependent filter is a LIABILITY.
-
-    python experiments/exp9_regime.py                 # ~15-25 min on a Colab T4
-    python experiments/exp9_regime.py --no-sirt       # ~3x faster
-"""
+# exp9: regime map over (N_theta, I0) -- where mr-fbp wins and where it loses
 import argparse
 
 from _common import RESULTS, banner, mean_std, np, plt, save
@@ -70,8 +43,7 @@ for seed in cfg.seeds:
     loss_frac.append(float((G["mrfbp"] > G["fbp-hann"]).mean()))
     print(f"  seed={seed}: MR-FBP beaten by FBP-Hann on {loss_frac[-1]*100:.0f}% of the grid\n")
 
-# Average the error grids over seeds. The headline claims are stated as
-# mean +/- std across independent draws, not as a single realisation.
+# average the error grids over seeds
 E = {m: mean_std(runs[m])[0] for m in methods}
 E_std = {m: mean_std(runs[m])[1] for m in methods}
 
@@ -81,7 +53,7 @@ np.savez(RESULTS / "exp9_regime.npz", angles=cfg.angles, i0=cfg.i0, seeds=cfg.se
 
 X, Y = np.meshgrid(cfg.i0, cfg.angles)          # x = photon count, y = projections
 
-# --- (a) the regime map: which method has the lowest MAE at each grid point ----
+# (a) regime map: which method has the lowest mae at each grid point
 stack = np.stack([E[m] for m in methods])
 winner = np.argmin(stack, axis=0)
 colors = ["#4C72B0", "#DD8452", "#55A868", "#C44E52"][:len(methods)]
@@ -90,7 +62,7 @@ fig, (a1, a2) = plt.subplots(1, 2, figsize=(13, 4.6))
 a1.pcolormesh(X, Y, winner, cmap=plt.matplotlib.colors.ListedColormap(colors),
               vmin=-0.5, vmax=len(methods) - 0.5, shading="nearest")
 
-# The crossover contour: MR-FBP beats FBP-Hann where this ratio is < 1.
+# crossover contour: mr-fbp beats fbp-hann where this ratio < 1
 ratio = E["mrfbp"] / E["fbp-hann"]
 cs = a1.contour(X, Y, ratio, levels=[1.0], colors="k", linewidths=2.2)
 a1.clabel(cs, fmt={1.0: "MR-FBP = FBP-Hann"}, fontsize=8)
@@ -101,7 +73,7 @@ a1.set_title("(a) which method has the lowest MAE")
 a1.legend(handles=[plt.Line2D([], [], marker="s", ls="", color=c, label=LABELS[m])
                    for c, m in zip(colors, methods)], fontsize=8, loc="upper left")
 
-# --- (b) MR-FBP relative to FBP-Hann: >1 means the static filter WINS ---------
+# (b) mr-fbp relative to fbp-hann: >1 means the static filter wins
 lim = np.nanmax(np.abs(np.log2(ratio)))
 im = a2.pcolormesh(X, Y, np.log2(ratio), cmap="RdBu_r", vmin=-lim, vmax=lim,
                    shading="nearest")
@@ -115,7 +87,7 @@ fig.suptitle(rf"Regime map, {cfg.phantom} phantom "
              rf"($N$ = $N_d$ = {cfg.n}, mean of {len(cfg.seeds)} seed(s))")
 save(fig, "exp9_regime")
 
-# --- (c) the mechanism, as slices: error vs N_theta at fixed noise ------------
+# (c) slices: error vs N_theta at fixed noise
 fig, ax = plt.subplots(1, len(cfg.i0), figsize=(3.1 * len(cfg.i0), 3.2), sharey=True)
 for j, (a, i0) in enumerate(zip(np.atleast_1d(ax), cfg.i0)):
     for m in methods:
@@ -128,7 +100,7 @@ fig.suptitle("Error vs number of projections, at each noise level "
              "(MR-FBP turns UPWARD when the data is noisy)")
 save(fig, "exp9_slices")
 
-# --- summary --------------------------------------------------------------
+# summary
 print("\nSUMMARY")
 loses = ratio > 1.0
 lf = np.array(loss_frac) * 100
