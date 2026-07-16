@@ -6,6 +6,7 @@ cd "$(dirname "$0")"
 
 python tests/test_core.py                 # correctness of the core algorithm (no ASTRA)
 python scripts/smoke_test.py              # ASTRA sanity check
+python scripts/make_phantom_figure.py    # phantom-families figure for the paper
 
 python experiments/exp1_projections.py    # quality vs number of projections
 python experiments/exp2_noise.py          # Poisson noise robustness
